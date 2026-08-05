@@ -37,11 +37,13 @@ jobs:
           sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
-      - name: Install Anchor CLI
+      - name: Install Anchor CLI (pre-built binary)
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor avm --force
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
+          curl -fsSL https://github.com/coral-xyz/anchor/releases/download/v${{ env.ANCHOR_VERSION }}/anchor-cli-${{ env.ANCHOR_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -o anchor.tar.gz
+          tar -xzf anchor.tar.gz
+          sudo mv anchor /usr/local/bin/anchor
+          chmod +x /usr/local/bin/anchor
+          anchor --version
 
       - name: Configure Solana
         run: |
@@ -63,10 +65,6 @@ jobs:
           anchor deploy --provider.cluster ${{ inputs.network }}
           echo "Program deployed!"
           solana program show --programs | grep bichocoin
-
-      - name: Generate IDL
-        run: |
-          anchor idl init --filepath target/idl/bichocoin_program.json $(solana-keygen pubkey target/deploy/bichocoin_program-keypair.json) --provider.cluster ${{ inputs.network }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
