@@ -26,10 +26,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust (stable with edition2024 support)
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: 1.75.0
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -49,13 +47,12 @@ jobs:
           sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
-      - name: Install Anchor CLI (pre-built binary)
+      - name: Install Anchor CLI via AVM
         run: |
-          curl -fsSL https://github.com/coral-xyz/anchor/releases/download/v${{ env.ANCHOR_VERSION }}/anchor-cli-${{ env.ANCHOR_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -o anchor.tar.gz
-          tar -xzf anchor.tar.gz
-          sudo mv anchor /usr/local/bin/anchor
-          chmod +x /usr/local/bin/anchor
-          anchor --version
+          cargo install --git https://github.com/coral-xyz/anchor avm --force --locked
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+          echo "$HOME/.avm/bin" >> $GITHUB_PATH
 
       - name: Generate Solana keypair
         run: |
