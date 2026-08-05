@@ -1,0 +1,78 @@
+name: Deploy to Devnet
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: "Target network"
+        required: true
+        default: "devnet"
+        type: choice
+        options:
+          - devnet
+          - mainnet-beta
+
+env:
+  CARGO_TERM_COLOR: always
+  SOLANA_VERSION: "1.18.17"
+  ANCHOR_VERSION: "0.30.1"
+
+jobs:
+  deploy:
+    name: Deploy Program
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.network }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.75.0
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --force
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+
+      - name: Configure Solana
+        run: |
+          solana config set --url ${{ inputs.network }}
+          echo "${{ secrets.SOLANA_PRIVATE_KEY }}" > ~/.config/solana/id.json
+          chmod 600 ~/.config/solana/id.json
+          solana address
+
+      - name: Airdrop SOL (devnet only)
+        if: inputs.network == 'devnet'
+        run: |
+          solana airdrop 2 --url devnet || true
+
+      - name: Build program
+        run: anchor build
+
+      - name: Deploy program
+        run: |
+          anchor deploy --provider.cluster ${{ inputs.network }}
+          echo "Program deployed!"
+          solana program show --programs | grep bichocoin
+
+      - name: Generate IDL
+        run: |
+          anchor idl init --filepath target/idl/bichocoin_program.json $(solana-keygen pubkey target/deploy/bichocoin_program-keypair.json) --provider.cluster ${{ inputs.network }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-${{ inputs.network }}
+          path: |
+            target/deploy/*.so
+            target/idl/*.json
+            target/types/*.ts
