@@ -26,7 +26,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust (stable with edition2024 support)
+      - name: Install Rust (1.75 for BPF compatibility)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.75.0
+
+      - name: Install Rust stable (for AVM)
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
@@ -57,6 +62,11 @@ jobs:
       - name: Generate Solana keypair
         run: |
           solana-keygen new --no-bip39-passphrase --force -o ~/.config/solana/id.json
+
+      - name: Regenerate Cargo.lock (v3 format for BPF compatibility)
+        run: |
+          rm -f Cargo.lock
+          cargo +1.75.0 generate-lockfile
 
       - name: Build program
         run: anchor build
