@@ -26,11 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust (1.75 for BPF compatibility)
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: 1.75.0
-
       - name: Install Rust stable (for AVM)
         uses: dtolnay/rust-toolchain@stable
 
@@ -63,33 +58,28 @@ jobs:
         run: |
           solana-keygen new --no-bip39-passphrase --force -o ~/.config/solana/id.json
 
-      - name: Pin crates for BPF compatibility
-        run: |
-          rm -f Cargo.lock
-          cargo +1.75.0 generate-lockfile
-          cargo +1.75.0 update -p blake3 --precise 1.5.0
-          cargo +1.75.0 update -p borsh@1.8 --precise 1.4.0
-          cargo +1.75.0 update -p serde_json --precise 1.0.128
-          cargo +1.75.0 update -p serde_bytes --precise 0.11.15
-          cargo +1.75.0 update -p serde --precise 1.0.210
-          cargo +1.75.0 update -p serde_derive --precise 1.0.210
-          cargo +1.75.0 update -p proc-macro-crate@3 --precise 3.2.0
-          cargo +1.75.0 update -p indexmap --precise 2.7.0
-          cargo +1.75.0 update -p unicode-segmentation --precise 1.12.0
-          cargo +1.75.0 update -p jobserver --precise 0.1.32
-          cargo +1.75.0 update -p syn@2 --precise 2.0.79
-          cargo +1.75.0 update -p proc-macro2 --precise 1.0.89
-          cargo +1.75.0 update -p quote --precise 1.0.37
-          cargo +1.75.0 update -p unicode-ident --precise 1.0.12
-          cargo +1.75.0 update -p libc --precise 0.2.155
-          cargo +1.75.0 update -p thiserror --precise 1.0.63
+      - name: Install Rust 1.75 for Solana BPF compatibility
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.75.0
+
+      - name: Install pinned nightly for Anchor IDL generation
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly-2024-04-18
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
 
       - name: Build program
         run: anchor build
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2024-04-18
 
       - name: Run tests
-        run: anchor test
-        continue-on-error: true
+        run: anchor test --provider.cluster localnet
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2024-04-18
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
