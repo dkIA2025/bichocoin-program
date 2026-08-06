@@ -32,6 +32,11 @@ jobs:
         with:
           toolchain: 1.75.0
 
+      - name: Install pinned nightly for Anchor IDL generation
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly-2024-04-18
+
       - name: Install Solana CLI
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
@@ -59,6 +64,8 @@ jobs:
 
       - name: Build program
         run: anchor build
+        env:
+          RUSTUP_TOOLCHAIN: nightly-2024-04-18
 
       - name: Deploy program
         run: |
