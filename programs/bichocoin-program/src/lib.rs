@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("7KXFE1696By6EQq1AGLLso4JS7bRgPu4LBkJL2b4ifmt");
+declare_id!("8rptyeuewV5niejZieWhjS4Uc8hXJp5FMbpDrk3RyUZt");
 
 /// Number of animals in the game
 const NUM_ANIMALS: u8 = 25;

@@ -16,6 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   SOLANA_VERSION: "1.18.17"
   ANCHOR_VERSION: "0.30.1"
+  PROGRAM_ID: "8rptyeuewV5niejZieWhjS4Uc8hXJp5FMbpDrk3RyUZt"
 
 jobs:
   deploy:
@@ -27,7 +28,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Install Rust stable (for AVM)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: deploy-cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            deploy-cargo-${{ runner.os }}-
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI via AVM
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor avm --force --locked
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+          echo "$HOME/.avm/bin" >> $GITHUB_PATH
+
+      - name: Install Rust 1.75 for Solana BPF compatibility
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.75.0
@@ -37,24 +66,15 @@ jobs:
         with:
           toolchain: nightly-2024-04-18
 
-      - name: Install Solana CLI
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
-      - name: Install Anchor CLI (pre-built binary)
-        run: |
-          curl -fsSL https://github.com/coral-xyz/anchor/releases/download/v${{ env.ANCHOR_VERSION }}/anchor-cli-${{ env.ANCHOR_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -o anchor.tar.gz
-          tar -xzf anchor.tar.gz
-          sudo mv anchor /usr/local/bin/anchor
-          chmod +x /usr/local/bin/anchor
-          anchor --version
-
       - name: Configure Solana
         run: |
           solana config set --url ${{ inputs.network }}
           echo "${{ secrets.SOLANA_PRIVATE_KEY }}" > ~/.config/solana/id.json
           chmod 600 ~/.config/solana/id.json
+          mkdir -p target/deploy
+          echo "${{ secrets.SOLANA_PROGRAM_KEYPAIR }}" > target/deploy/bichocoin_program-keypair.json
+          chmod 600 target/deploy/bichocoin_program-keypair.json
+          test "$(solana-keygen pubkey target/deploy/bichocoin_program-keypair.json)" = "${{ env.PROGRAM_ID }}"
           solana address
 
       - name: Airdrop SOL (devnet only)
@@ -71,7 +91,7 @@ jobs:
         run: |
           anchor deploy --provider.cluster ${{ inputs.network }}
           echo "Program deployed!"
-          solana program show --programs | grep bichocoin
+          solana program show "${{ env.PROGRAM_ID }}" --url ${{ inputs.network }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-bichocoin_program = "7KXFE1696By6EQq1AGLLso4JS7bRgPu4LBkJL2b4ifmt"
+bichocoin_program = "8rptyeuewV5niejZieWhjS4Uc8hXJp5FMbpDrk3RyUZt"
 
 [programs.devnet]
-bichocoin_program = "7KXFE1696By6EQq1AGLLso4JS7bRgPu4LBkJL2b4ifmt"
+bichocoin_program = "8rptyeuewV5niejZieWhjS4Uc8hXJp5FMbpDrk3RyUZt"
 
 [registry]
 url = "https://api.apr.dev"
